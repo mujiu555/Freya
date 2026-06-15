@@ -1,0 +1,24 @@
+{
+  "comments": {
+    "blockComment": [],
+    "lineComment": { "comment": ";;", "noIndent": false }
+  },
+  "brackets": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"]
+  ],
+  "autoClosingPairs": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"],
+    ["\"", "\""]
+  ],
+  "surroundingPairs": [
+    ["(", ")"],
+    ["[", "]"],
+    ["{", "}"],
+    ["\"", "\""]
+  ],
+  "colorizedBracketPairs": []
+}

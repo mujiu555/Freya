@@ -1,0 +1,43 @@
+{
+  "name": "freya",
+  "displayName": "freya",
+  "version": "0.0.1",
+  "main": "extension.js",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/illusory0x0"
+  },
+  "publisher": "illusory0x0",
+  "author": {
+    "name": "illusory0x0"
+  },
+  "activationEvents": [],
+  "contributes": {
+    "languages": [
+      {
+        "id": "freya",
+        "extensions": [
+          ".fry"
+        ],
+        "configuration": "language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "freya",
+        "scopeName": "source.freya",
+        "path": "freya.tmLanguage.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.13",
+    "@types/vscode": "^1.100.0",
+    "@vscode/vsce": "^3.7.1"
+  }
+}

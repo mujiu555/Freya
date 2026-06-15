@@ -1,0 +1,13 @@
+[package]
+name = "freya-rs"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "main"
+path = "main.rs"
+
+
+[dependencies]
+pest = "2.8.6"
+pest_derive = "2.8.6"

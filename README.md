@@ -1,1 +1,2 @@
-# Freya
+# Freya Programming language 
+

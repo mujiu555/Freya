@@ -1,0 +1,20 @@
+// special rule in pest convention
+WHITESPACE = _{ WHITE_SPACE+ }
+COMMENT    = _{ ";" ~ ('\u{0000}'..'\u{0009}' | '\u{000b}'..'\u{ffff}')* ~ "\n" }
+
+integer    = @{ ASCII_DIGIT+ }
+identifier = @{ ASCII_ALPHA_LOWER ~ (ASCII_ALPHA_LOWER | ASCII_DIGIT | "-")* }
+hole       = @{ "_" }
+
+// string content
+// negative '\n' (U+000A), '"' (U+0022)
+string = @{ "\"" ~ ('\u{0000}'..'\u{0009}' | '\u{000B}'..'\u{0021}' | '\u{0023}'..'\u{FFFF}')* ~ "\"" }
+
+expr = _{ atom | list }
+atom = _{ hole | identifier | integer | string }
+list =  { "(" ~ expr* ~ ")" }
+
+// toplevels need explicit skip white space, due to WHITESPACE and COMMENT only automatically matched between rules. 
+//
+// [doc](https://docs.rs/pest/latest/pest/#whitespace-and-comment)
+toplevels = _{ WHITE_SPACE* ~ expr* }

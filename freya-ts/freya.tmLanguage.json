@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "freya",
+  "scopeName": "source.freya",
+  "patterns": [
+    {
+      "comment": "comment",
+      "name": "comment",
+      "match": ";[^\\n]*\\n"
+    },
+    {
+      "comment": "integer",
+      "name": "constant.numeric",
+      "match": "\\d+"
+    },
+    {
+      "comment": "identifier",
+      "name": "variable.name",
+      "match": "[a-z][a-z0-9\\-]*"
+    },
+    {
+      "comment": "hole",
+      "name": "keyword.operator",
+      "match": "_"
+    },
+    {
+      "comment": "string",
+      "name": "string",
+      "match": "\"[^\"\\n]*\""
+    }
+  ]
+}

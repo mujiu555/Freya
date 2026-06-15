@@ -1,0 +1,28 @@
+;; freya programming language 
+
+10 
+
+
+;; unknown delimiter
+## 
+
+;; mismatch delimiter
+(  )
+(  ]
+(  }
+
+[  )
+[  ]
+[  }
+
+
+{  )
+{  ]
+{  }
+
+;; lone delimiter 
+(  [  { 
+(display "hello world")
+
+(display 10)
+
