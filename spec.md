@@ -1,17 +1,15 @@
 name:   freya
-suffix: fry 
+suffix: fry
 
+EBNF convention
 
-
-EBNF convention 
-
-- `\*`        repeat 
-- `\+`        repeat at least one 
+- `\*`        repeat
+- `\+`        repeat at least one
 - `()`        group
-- `..`        unicode range 
-- `U+0000`    unicode code point  
-- `::=`       define rule 
-- `<expr>`    non terminal symbol 
+- `..`        unicode range
+- `U+0000`    unicode code point
+- `::=`       define rule
+- `<expr>`    non terminal symbol
 - `""`        string literal
 
 ```BNF
@@ -30,3 +28,4 @@ COMMENT    ::= ";" (U+0000..U+0009 | U+000B..U+FFFF)* "\n"
 
 <toplevels>  ::= <expr>*
 ```
+

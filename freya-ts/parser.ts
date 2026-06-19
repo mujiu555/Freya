@@ -121,11 +121,11 @@ type parser = {
 
 let parser = Object.assign(
   // prettier-ignore
-  (text: str, ln: int, ch: int, ix: int, pen: stack<expr>, ctx: stack<frame>, rpt: error[], ): parser => ({ text, line: ln, character: ch, index: ix, pending: pen, context: ctx, report: rpt, }),
+  (text: str, ln: int, ch: int, ix: int, pen: stack<expr>, ctx: stack<frame>, rpt: error[],): parser => ({ text, line: ln, character: ch, index: ix, pending: pen, context: ctx, report: rpt, }),
   {
     // prettier-ignore
     // next token 
-    next : (self: parser): option<token> => {
+    next: (self: parser): option<token> => {
       let pln = self.line; let pch = self.character; let pix = self.index;
       let ln = pln; let ch = pch; let ix = pix;
       k1: while (ix < self.text.length) {
@@ -318,7 +318,7 @@ let parser = Object.assign(
     },
     // prettier-ignore
     // parse token with context 
-    matching : (self: parser, f: frame, t: token): void => {
+    matching: (self: parser, f: frame, t: token): void => {
       // rule 
       // delimiter matching => reduce 
       // mismatch  mismatch => reduce and report 
