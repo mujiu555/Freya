@@ -1,13 +1,17 @@
 import * as vscode from "vscode";
 
 import { parser, range } from "./parser";
+import * as P from "./parser";
 export { activate, deactivate };
 
 let deactivate = (): void => {};
 
 let diagnostic = vscode.languages.createDiagnosticCollection("freya");
 
-type error = { range: range; message: string };
+let quickfixes: Map<string, quickfix[]> = new Map();
+
+type error = P.error;
+type quickfix = P.quickfix;
 
 let error = {
   to_diagnostic: (self: error) => {
@@ -35,6 +39,7 @@ let check_document = (doc: vscode.TextDocument): void => {
   let sexp = parser.parse(prs);
 
   diagnostic.set(doc.uri, prs.report.map(error.to_diagnostic));
+  quickfixes.set(doc.uri.toString(), prs.quickfix);
 };
 
 let activate = (context: vscode.ExtensionContext): void => {
@@ -46,7 +51,7 @@ let activate = (context: vscode.ExtensionContext): void => {
     check_document(editor.document);
   }
   context.subscriptions.push(
-    vscode.workspace.onDidChangeTextDocument(event => {
+    vscode.workspace.onDidChangeTextDocument((event) => {
       check_document(event.document);
     }),
     vscode.languages.registerCompletionItemProvider("freya", {
@@ -68,8 +73,39 @@ let activate = (context: vscode.ExtensionContext): void => {
         token,
       ): vscode.WorkspaceEdit => {
         let edit = new vscode.WorkspaceEdit();
-        // using edit.replace() to modify source code. 
+        // using edit.replace() to modify source code.
         return edit;
+      },
+    }),
+    vscode.languages.registerCodeActionsProvider("freya", {
+      provideCodeActions: (
+        document,
+        range,
+        context,
+        token,
+      ): vscode.CodeAction[] => {
+        let qf = quickfixes.get(document.uri.toString()) ?? [];
+
+        let rslt: vscode.CodeAction[] = [];
+
+        for (let q of qf) {
+          let qr = new vscode.Range(
+            new vscode.Position(q.range.start.line, q.range.start.character),
+            new vscode.Position(q.range.end.line, q.range.end.character),
+          );
+          if (qr.contains(range)) {
+            let edit = new vscode.WorkspaceEdit();
+            edit.replace(document.uri, qr, q.replacement);
+            let ca = new vscode.CodeAction(
+              q.title,
+              vscode.CodeActionKind.QuickFix,
+            );
+            ca.edit = edit;
+            rslt.push(ca);
+          }
+        }
+
+        return rslt;
       },
     }),
   );

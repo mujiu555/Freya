@@ -1,5 +1,5 @@
 export { parser, range, position };
-export type { error };
+export type { error, quickfix };
 /** 32-bits signed integer */
 type int = number;
 
@@ -108,6 +108,12 @@ let frame = (akr: int, lft: left_token): frame => ({ akr, lft });
 
 type error = { range: range; message: str };
 let error = (range: range, message: str) => ({ range, message });
+type quickfix = { title: str; range: range; replacement: str };
+let quickfix = (title: str, range: range, replacement: str) => ({
+  title,
+  range,
+  replacement,
+});
 
 type parser = {
   text: str;
@@ -117,14 +123,15 @@ type parser = {
   pending: stack<expr>;
   context: stack<frame>;
   report: error[];
+  quickfix: quickfix[];
 };
 
 let parser = Object.assign(
   // prettier-ignore
-  (text: str, ln: int, ch: int, ix: int, pen: stack<expr>, ctx: stack<frame>, rpt: error[], ): parser => ({ text, line: ln, character: ch, index: ix, pending: pen, context: ctx, report: rpt, }),
+  (text: str, line: int, character: int, index: int, pending: stack<expr>, context: stack<frame>, report: error[], quickfix : quickfix[]): parser => ({text, line, character, index,pending,context,report,quickfix}),
   {
     // prettier-ignore
-    // next token 
+    // next token
     next : (self: parser): option<token> => {
       let pln = self.line; let pch = self.character; let pix = self.index;
       let ln = pln; let ch = pch; let ix = pix;
@@ -291,6 +298,7 @@ let parser = Object.assign(
             self.line = ln; self.character = ch; self.index = ix;
             let r = range(position(pln, pch), position(ln, ch));
             stack.push(self.report, error(r, "unknown token"));
+            stack.push(self.quickfix, quickfix("delete",r, ""))
             return token.hole(r);
           }
         }
@@ -298,7 +306,7 @@ let parser = Object.assign(
       return none;
     },
     // prettier-ignore
-    // parse token without context 
+    // parse token without context
     advance: (self: parser, t: token): void => {
       w1: switch (t.tag) {
         case "left_parenthesis": case "left_curly_bracket": case "left_square_bracket": { // nest
@@ -307,6 +315,7 @@ let parser = Object.assign(
         }
         case "right_parenthesis": case "right_curly_bracket": case "tsqrbrakt": { // retain as hole
           stack.push(self.report, error(t.range, "lone delimiter"));
+          stack.push(self.quickfix,quickfix("delete",t.range,""))
           stack.push(self.pending, token.hole(t.range));
           break w1;
         }
@@ -317,7 +326,7 @@ let parser = Object.assign(
       }
     },
     // prettier-ignore
-    // parse token with context 
+    // parse token with context
     matching : (self: parser, f: frame, t: token): void => {
       // rule 
       // delimiter matching => reduce 
@@ -347,6 +356,8 @@ let parser = Object.assign(
             }
             case "right_curly_bracket": case "tsqrbrakt": { // mismatch
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix,quickfix("fix",t.range,")"));
+              
               stack.pop(self.context); // consume frame
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -375,6 +386,8 @@ let parser = Object.assign(
             }
             case "right_parenthesis": case "tsqrbrakt": { // mismatch
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix,quickfix("fix",t.range,"}"));
+
               stack.pop(self.context); // consume frame
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -403,6 +416,8 @@ let parser = Object.assign(
             }
             case "right_parenthesis": case "right_curly_bracket": { // mismatch
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix,quickfix("fix",t.range,"]"));
+
               stack.pop(self.context); // consume frame
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -446,6 +461,7 @@ let parser = Object.assign(
         for (const f of self.context) {
           let len = f.akr - prev;
           stack.push(self.report, error(f.lft.range, "lone delimiter"));
+          stack.push(self.quickfix, quickfix("delete", f.lft.range, ""));
           let val = token.hole(f.lft.range);
           stack.copy_nonoverlapping(src, i, dst, j, len);
           i += len;
@@ -459,6 +475,6 @@ let parser = Object.assign(
         return dst;
       }
     },
-    make: (text: str): parser => parser(text, 0, 0, 0, [], [], []),
+    make: (text: str): parser => parser(text, 0, 0, 0, [], [], [], []),
   },
 );
