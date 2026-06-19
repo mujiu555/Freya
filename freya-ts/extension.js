@@ -82,12 +82,17 @@ var slist = (range3, children) => ({
 });
 var frame = (akr, lft) => ({ akr, lft });
 var error = (range3, message) => ({ range: range3, message });
+var quickfix = (title, range3, replacement) => ({
+  title,
+  range: range3,
+  replacement
+});
 var parser = Object.assign(
   // prettier-ignore
-  (text, ln, ch, ix, pen, ctx, rpt) => ({ text, line: ln, character: ch, index: ix, pending: pen, context: ctx, report: rpt }),
+  (text, line, character, index, pending, context, report, quickfix2) => ({ text, line, character, index, pending, context, report, quickfix: quickfix2 }),
   {
     // prettier-ignore
-    // next token 
+    // next token
     next: (self) => {
       let pln = self.line;
       let pch = self.character;
@@ -405,6 +410,7 @@ var parser = Object.assign(
             self.index = ix;
             let r = range(position(pln, pch), position(ln, ch));
             stack.push(self.report, error(r, "unknown token"));
+            stack.push(self.quickfix, quickfix("delete", r, ""));
             return token.hole(r);
           }
         }
@@ -412,7 +418,7 @@ var parser = Object.assign(
       return none;
     },
     // prettier-ignore
-    // parse token without context 
+    // parse token without context
     advance: (self, t) => {
       w1: switch (t.tag) {
         case "left_parenthesis":
@@ -425,6 +431,7 @@ var parser = Object.assign(
         case "right_curly_bracket":
         case "tsqrbrakt": {
           stack.push(self.report, error(t.range, "lone delimiter"));
+          stack.push(self.quickfix, quickfix("delete", t.range, ""));
           stack.push(self.pending, token.hole(t.range));
           break w1;
         }
@@ -438,7 +445,7 @@ var parser = Object.assign(
       }
     },
     // prettier-ignore
-    // parse token with context 
+    // parse token with context
     matching: (self, f, t) => {
       w1: switch (f.lft.tag) {
         case "left_parenthesis": {
@@ -459,6 +466,7 @@ var parser = Object.assign(
             case "right_curly_bracket":
             case "tsqrbrakt": {
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix, quickfix("fix", t.range, ")"));
               stack.pop(self.context);
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -493,6 +501,7 @@ var parser = Object.assign(
             case "right_parenthesis":
             case "tsqrbrakt": {
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix, quickfix("fix", t.range, "}"));
               stack.pop(self.context);
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -527,6 +536,7 @@ var parser = Object.assign(
             case "right_parenthesis":
             case "right_curly_bracket": {
               stack.push(self.report, error(t.range, "mismatch delimiter"));
+              stack.push(self.quickfix, quickfix("fix", t.range, "]"));
               stack.pop(self.context);
               let children = stack.drain(self.pending, f.akr, self.pending.length);
               let r = range(f.lft.range.start, t.range.end);
@@ -571,6 +581,7 @@ var parser = Object.assign(
         for (const f of self.context) {
           let len2 = f.akr - prev;
           stack.push(self.report, error(f.lft.range, "lone delimiter"));
+          stack.push(self.quickfix, quickfix("delete", f.lft.range, ""));
           let val = token.hole(f.lft.range);
           stack.copy_nonoverlapping(src, i, dst, j, len2);
           i += len2;
@@ -584,7 +595,7 @@ var parser = Object.assign(
         return dst;
       }
     },
-    make: (text) => parser(text, 0, 0, 0, [], [], [])
+    make: (text) => parser(text, 0, 0, 0, [], [], [], [])
   }
 );
 
@@ -592,6 +603,7 @@ var parser = Object.assign(
 var deactivate = () => {
 };
 var diagnostic = vscode.languages.createDiagnosticCollection("freya");
+var quickfixes = /* @__PURE__ */ new Map();
 var error2 = {
   to_diagnostic: (self) => {
     let {
@@ -616,6 +628,7 @@ var check_document = (doc) => {
   let prs = parser.make(text);
   let sexp = parser.parse(prs);
   diagnostic.set(doc.uri, prs.report.map(error2.to_diagnostic));
+  quickfixes.set(doc.uri.toString(), prs.quickfix);
 };
 var activate = (context) => {
   console.log("activate freya language extension");
@@ -641,6 +654,29 @@ var activate = (context) => {
       provideRenameEdits: (document, position2, newName, token2) => {
         let edit = new vscode.WorkspaceEdit();
         return edit;
+      }
+    }),
+    vscode.languages.registerCodeActionsProvider("freya", {
+      provideCodeActions: (document, range3, context2, token2) => {
+        let qf = quickfixes.get(document.uri.toString()) ?? [];
+        let rslt = [];
+        for (let q of qf) {
+          let qr = new vscode.Range(
+            new vscode.Position(q.range.start.line, q.range.start.character),
+            new vscode.Position(q.range.end.line, q.range.end.character)
+          );
+          if (qr.contains(range3)) {
+            let edit = new vscode.WorkspaceEdit();
+            edit.replace(document.uri, qr, q.replacement);
+            let ca = new vscode.CodeAction(
+              q.title,
+              vscode.CodeActionKind.QuickFix
+            );
+            ca.edit = edit;
+            rslt.push(ca);
+          }
+        }
+        return rslt;
       }
     })
   );
